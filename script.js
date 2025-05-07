@@ -791,22 +791,23 @@ function simulateDownload(progressBar) {
 }
 
 function convertToEmbedUrl(url) {
-  let videoId = '';
-  
-  if (url.includes('youtube.com/watch?v=')) {
-    videoId = url.split('v=')[1];
-  } else if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1];
-  } else if (url.includes('embed/')) {
-    videoId = url.split('embed/')[1];
+    let videoId = '';
+    
+    if (url.includes('youtube.com/watch?v=')) {
+      videoId = url.split('v=')[1];
+    } else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1];
+    } else if (url.includes('embed/')) {
+      videoId = url.split('embed/')[1];
+    }
+    
+    // إزالة أي إضافات بعد معرّف الفيديو
+    videoId = videoId.split('&')[0];
+    videoId = videoId.split('?')[0];
+    
+    // استخدام نطاق youtube-nocookie.com لتجنب الإعلانات
+    return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
   }
-  
-  // Remove any parameters after video ID
-  videoId = videoId.split('&')[0];
-  videoId = videoId.split('?')[0];
-  
-  return `https://www.youtube.com/embed/${videoId}`;
-}
 
 function isValidYouTubeUrl(url) {
   const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
