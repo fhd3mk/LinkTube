@@ -793,20 +793,52 @@ function simulateDownload(progressBar) {
 function convertToEmbedUrl(url) {
     let videoId = '';
     
-    if (url.includes('youtube.com/watch?v=')) {
-      videoId = url.split('v=')[1];
-    } else if (url.includes('youtu.be/')) {
-      videoId = url.split('youtu.be/')[1];
-    } else if (url.includes('embed/')) {
-      videoId = url.split('embed/')[1];
+    // استخراج ID الفيديو من جميع أنواع الروابط
+    const patterns = [
+      { regex: /youtube\.com\/watch\?v=([^&]+)/, index: 1 },
+      { regex: /youtu\.be\/([^?]+)/, index: 1 },
+      { regex: /youtube\.com\/embed\/([^?]+)/, index: 1 },
+      { regex: /youtube\.com\/shorts\/([^?]+)/, index: 1 }
+    ];
+  
+    for (const pattern of patterns) {
+      const match = url.match(pattern.regex);
+      if (match) {
+        videoId = match[pattern.index];
+        break;
+      }
     }
+  
+    if (!videoId) {
+      showToast('رابط اليوتيوب غير صالح', 'error');
+      return '';
+    }
+  
+    // تنظيف ID الفيديو
+    videoId = videoId.split(/[?&/#]/)[0];
+  
+    // قائمة سيرفرات Invidious الاحتياطية (تحديث 2023)
+    const invidiousServers = [
+      'https://invidious.snopyta.org',
+      'https://invidious.private.co',
+      'https://yt.artemislena.eu',
+      'https://invidious.lunar.icu'
+    ];
+  
+    // اختيار سيرفر عشوائي
+    const server = invidiousServers[Math.floor(Math.random() * invidiousServers.length)];
     
-    // إزالة أي إضافات بعد معرّف الفيديو
-    videoId = videoId.split('&')[0];
-    videoId = videoId.split('?')[0];
-    
-    // استخدام نطاق youtube-nocookie.com لتجنب الإعلانات
-    return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+    // معلمات التشغيل
+    const params = new URLSearchParams({
+      autoplay: 1,
+      rel: 0,               // إخفاء الفيديوهات المقترحة
+      modestbranding: 1,    // تقليل شعار يوتيوب
+      fs: 0,                // إخفاء زر الملء الشاشة
+      iv_load_policy: 3,    // إخفاء الشروحات
+      disablekb: 1          // تعطيل مفاتيح التحكم
+    });
+  
+    return `${server}/embed/${videoId}?${params.toString()}`;
   }
 
 function isValidYouTubeUrl(url) {
@@ -826,3 +858,17 @@ function generateDownloadUrl(youtubeUrl) {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', initApp);
+
+async function updateInvidiousServers() {
+    try {
+      const response = await fetch('https://api.invidious.io/instances.json');
+      const servers = await response.json();
+      // تصفية السيرفرات العاملة
+      return servers
+        .filter(server => server[1].type === 'https')
+        .map(server => `https://${server[1].uri}`);
+    } catch (error) {
+      console.error('Failed to update servers:', error);
+      return []; // العودة للقائمة الافتراضية
+    }
+  }
