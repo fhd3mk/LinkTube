@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  
+  <!-- أضف هذا في قسم head -->
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- أضف هذا في body قبل نهاية الملف -->
+<div id="videoPlayerModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <div class="modal-video-container">
+      <iframe id="modalVideoFrame" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="playlistModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h3>إدارة قوائم التشغيل</h3>
+    <div id="playlistsContainer"></div>
+    <form id="createPlaylistForm">
+      <input type="text" id="newPlaylistName" placeholder="اسم قائمة التشغيل الجديدة" required>
+      <button type="submit">إنشاء قائمة</button>
+    </form>
+  </div>
+</div>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TubeLink - مشغل يوتيوب بدون إعلانات</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="dark">
+  <!-- نافذة التأكيد -->
+  <div class="confirm-modal" id="confirmModal">
+    <div class="confirm-content">
+      <h3 id="confirmMessage">هل أنت متأكد من حذف هذا الفيديو؟</h3>
+      <div class="confirm-buttons">
+        <button id="confirmYes" class="confirm-yes"><i class="fas fa-check"></i> نعم</button>
+        <button id="confirmNo" class="confirm-no"><i class="fas fa-times"></i> لا</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- زر تبديل الثيم -->
+  <button class="toggle-theme" id="themeButton">
+    <i class="fas fa-moon"></i> تغيير المظهر
+  </button>
+
+  <!-- صفحة المصادقة -->
+  <div id="authPage" class="auth-container">
+    <h1><i class="fas fa-video"></i> TubeLink</h1>
+    
+    <!-- نموذج تسجيل الدخول -->
+    <div id="loginFormContainer">
+      <form id="loginForm" class="auth-form">
+        <h2>تسجيل الدخول</h2>
+        <div class="form-group">
+          <label for="username">اسم المستخدم</label>
+          <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+          <label for="password">كلمة المرور</label>
+          <input type="password" id="password" required>
+        </div>
+        <div class="form-group remember-me">
+          <input type="checkbox" id="rememberMe">
+          <label for="rememberMe">تذكرني</label>
+        </div>
+        <button type="submit">تسجيل الدخول</button>
+        <p class="auth-switch">ليس لديك حساب؟ <a href="#" id="showRegister">إنشاء حساب</a></p>
+      </form>
+    </div>
+
+    <!-- نموذج التسجيل -->
+    <div id="registerFormContainer" style="display: none;">
+      <form id="registerForm" class="auth-form">
+        <h2>إنشاء حساب</h2>
+        <div class="form-group">
+          <label for="registerUsername">اسم المستخدم</label>
+          <input type="text" id="registerUsername" required>
+        </div>
+        <div class="form-group">
+          <label for="email">البريد الإلكتروني</label>
+          <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">كلمة المرور</label>
+          <input type="password" id="registerPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">تأكيد كلمة المرور</label>
+          <input type="password" id="confirmPassword" required>
+        </div>
+        <button type="submit">إنشاء حساب</button>
+        <p class="auth-switch">لديك حساب بالفعل؟ <a href="#" id="showLogin">تسجيل الدخول</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- الصفحة الرئيسية بعد التسجيل -->
+  <div id="mainPage" style="display: none;">
+    <header class="header">
+      <h1><i class="fas fa-video"></i> TubeLink</h1>
+      <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </header>
+
+    <!-- نموذج إضافة فيديو -->
+    <form id="videoForm" class="video-form">
+      <h2><i class="fas fa-plus-circle"></i> إضافة فيديو جديد</h2>
+      <div class="form-group">
+        <label for="videoTitle">عنوان الفيديو</label>
+        <input type="text" id="videoTitle" required>
+      </div>
+      <div class="form-group">
+        <label for="videoUrl">رابط اليوتيوب</label>
+        <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+      </div>
+      <div class="form-group">
+        <label for="videoCategory">التصنيف</label>
+        <select id="videoCategory" required>
+          <option value="">اختر تصنيفاً</option>
+          <option value="ترفيهي">ترفيهي</option>
+          <option value="العاب">العاب</option>
+          <option value="تعليمي">تعليمي</option>
+          <option value="العاب رعب">العاب رعب</option>
+          <option value="رعب">رعب</option>
+          <option value="رياضة">رياضة</option>
+          <option value="أخبار">أخبار</option>
+        </select>
+      </div>
+      <button type="submit"><i class="fas fa-upload"></i> رفع الفيديو</button>
+    </form>
+
+    <!-- شريط البحث -->
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="ابحث عن فيديو...">
+      <button id="searchBtn"><i class="fas fa-search"></i> بحث</button>
+    </div>
+
+    <!-- قائمة الفيديوهات -->
+    <div class="video-list-container">
+      <!-- في قسم الفيديوهات في HTML -->
+<div class="video-actions-container">
+  <button id="showAllBtn" class="active">عرض الكل</button>
+  <button id="showBookmarksBtn">عرض المفضلة</button>
+</div>
+      <h2><i class="fas fa-list"></i> الفيديوهات</h2>
+      <div id="videoList" class="video-list"></div>
+      <div id="emptyState" class="empty-state">
+        <i class="fas fa-video-slash"></i>
+        <h3>لا توجد فيديوهات متاحة</h3>
+        <p>ابدأ بإضافة فيديوهات جديدة</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- رسائل التنبيه -->
+  <div id="toast" class="toast">
+    <i class="fas fa-check-circle"></i>
+    <span id="toastMessage"></span>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
