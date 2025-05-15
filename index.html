@@ -1,7 +1,31 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta name="referrer" content="no-referrer">
+  
+  <!-- أضف هذا في قسم head -->
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- أضف هذا في body قبل نهاية الملف -->
+<div id="videoPlayerModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <div class="modal-video-container">
+      <iframe id="modalVideoFrame" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="playlistModal" class="modal">
+  <div class="modal-content">
+    <span class="close-modal">&times;</span>
+    <h3>إدارة قوائم التشغيل</h3>
+    <div id="playlistsContainer"></div>
+    <form id="createPlaylistForm">
+      <input type="text" id="newPlaylistName" placeholder="اسم قائمة التشغيل الجديدة" required>
+      <button type="submit">إنشاء قائمة</button>
+    </form>
+  </div>
+</div>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TubeLink - مشغل يوتيوب بدون إعلانات</title>
@@ -9,217 +33,134 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-theme="dark">
-  <!-- نافذة التأكيد المخصصة -->
+  <!-- نافذة التأكيد -->
   <div class="confirm-modal" id="confirmModal">
     <div class="confirm-content">
       <h3 id="confirmMessage">هل أنت متأكد من حذف هذا الفيديو؟</h3>
       <div class="confirm-buttons">
-        <button id="confirmYes" class="delete-btn"><i class="fas fa-check"></i> نعم</button>
-        <button id="confirmNo" class="share-btn"><i class="fas fa-times"></i> لا</button>
+        <button id="confirmYes" class="confirm-yes"><i class="fas fa-check"></i> نعم</button>
+        <button id="confirmNo" class="confirm-no"><i class="fas fa-times"></i> لا</button>
       </div>
     </div>
   </div>
 
-  <button class="toggle-theme" onclick="toggleTheme()">
+  <!-- زر تبديل الثيم -->
+  <button class="toggle-theme" id="themeButton">
     <i class="fas fa-moon"></i> تغيير المظهر
   </button>
 
-  <div class="back-to-top" onclick="scrollToTop()">
-    <i class="fas fa-arrow-up"></i>
-  </div>
-
-  <a class="youtube-icon" href="https://youtu.be/FOj-9-3h7sw" target="_blank">
-    <i class="fab fa-youtube"></i>
-    <span>شاهد شرح استخدام الموقع</span>
-  </a>
-
-  <!-- صفحة تسجيل الدخول أو إنشاء حساب -->
+  <!-- صفحة المصادقة -->
   <div id="authPage" class="auth-container">
     <h1><i class="fas fa-video"></i> TubeLink</h1>
+    
+    <!-- نموذج تسجيل الدخول -->
     <div id="loginFormContainer">
-      <form class="auth-form" id="loginForm">
+      <form id="loginForm" class="auth-form">
         <h2>تسجيل الدخول</h2>
         <div class="form-group">
           <label for="username">اسم المستخدم</label>
-          <input type="text" id="username" placeholder="أدخل اسم المستخدم" required />
+          <input type="text" id="username" required>
         </div>
         <div class="form-group">
           <label for="password">كلمة المرور</label>
-          <input type="password" id="password" placeholder="أدخل كلمة المرور" required />
+          <input type="password" id="password" required>
         </div>
-        <div class="remember-me">
-          <input type="checkbox" id="rememberMe" />
+        <div class="form-group remember-me">
+          <input type="checkbox" id="rememberMe">
           <label for="rememberMe">تذكرني</label>
         </div>
-        <button type="submit" id="loginBtn">
-          <span id="loginText">تسجيل الدخول</span>
-          <span id="loginSpinner" class="loading-spinner" style="display: none;"></span>
-        </button>
-        <div class="auth-switch">
-          ليس لديك حساب؟ <a onclick="showRegisterForm()">إنشاء حساب</a>
-        </div>
+        <button type="submit">تسجيل الدخول</button>
+        <p class="auth-switch">ليس لديك حساب؟ <a href="#" id="showRegister">إنشاء حساب</a></p>
       </form>
     </div>
 
+    <!-- نموذج التسجيل -->
     <div id="registerFormContainer" style="display: none;">
-      <form class="auth-form" id="registerForm">
-        <h2>إنشاء حساب جديد</h2>
+      <form id="registerForm" class="auth-form">
+        <h2>إنشاء حساب</h2>
         <div class="form-group">
           <label for="registerUsername">اسم المستخدم</label>
-          <input type="text" id="registerUsername" placeholder="أدخل اسم المستخدم" required minlength="4" />
+          <input type="text" id="registerUsername" required>
         </div>
         <div class="form-group">
           <label for="email">البريد الإلكتروني</label>
-          <input type="email" id="email" placeholder="أدخل البريد الإلكتروني" required />
+          <input type="email" id="email" required>
         </div>
         <div class="form-group">
           <label for="registerPassword">كلمة المرور</label>
-          <input type="password" id="registerPassword" placeholder="أدخل كلمة المرور" required minlength="6" />
+          <input type="password" id="registerPassword" required>
         </div>
         <div class="form-group">
           <label for="confirmPassword">تأكيد كلمة المرور</label>
-          <input type="password" id="confirmPassword" placeholder="أكد كلمة المرور" required />
+          <input type="password" id="confirmPassword" required>
         </div>
-        <button type="submit" id="registerBtn">
-          <span id="registerText">إنشاء حساب</span>
-          <span id="registerSpinner" class="loading-spinner" style="display: none;"></span>
-        </button>
-        <div class="auth-switch">
-          لديك حساب بالفعل؟ <a onclick="showLoginForm()">تسجيل الدخول</a>
-        </div>
+        <button type="submit">إنشاء حساب</button>
+        <p class="auth-switch">لديك حساب بالفعل؟ <a href="#" id="showLogin">تسجيل الدخول</a></p>
       </form>
     </div>
   </div>
 
-  <!-- صفحة تحميل الفيديوهات بعد تسجيل الدخول -->
-  <div id="uploadPage" style="display: none;">
-    <div class="header">
+  <!-- الصفحة الرئيسية بعد التسجيل -->
+  <div id="mainPage" style="display: none;">
+    <header class="header">
       <h1><i class="fas fa-video"></i> TubeLink</h1>
-      <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
-    </div>
+      <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</button>
+    </header>
 
-    <form id="videoForm">
+    <!-- نموذج إضافة فيديو -->
+    <form id="videoForm" class="video-form">
+      <h2><i class="fas fa-plus-circle"></i> إضافة فيديو جديد</h2>
       <div class="form-group">
         <label for="videoTitle">عنوان الفيديو</label>
-        <input type="text" id="videoTitle" required maxlength="100" />
+        <input type="text" id="videoTitle" required>
       </div>
       <div class="form-group">
-        <label for="videoUrl">رابط الفيديو</label>
-        <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." required />
+        <label for="videoUrl">رابط اليوتيوب</label>
+        <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." required>
       </div>
       <div class="form-group">
-        <label for="videoCategory">تصنيف الفيديو</label>
+        <label for="videoCategory">التصنيف</label>
         <select id="videoCategory" required>
           <option value="">اختر تصنيفاً</option>
-          <option value="أخبار">أخبار</option>
-          <option value="رياضة">رياضة</option>
-          <option value="تعليمي">تعليمي</option>
-          <option value="تكنولوجيا">تكنولوجيا</option>
           <option value="ترفيهي">ترفيهي</option>
+          <option value="العاب">العاب</option>
+          <option value="تعليمي">تعليمي</option>
+          <option value="العاب رعب">العاب رعب</option>
           <option value="رعب">رعب</option>
-          <option value="ألعاب">ألعاب</option>
-          <option value="أخرى">أخرى</option>
+          <option value="رياضة">رياضة</option>
+          <option value="أخبار">أخبار</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="videoTags">علامات (مفصولة بفواصل)</label>
-        <input type="text" id="videoTags" placeholder="تعليمي,برمجة,ويب" />
-      </div>
-      <div class="form-group">
-        <label for="videoDesc">وصف الفيديو</label>
-        <textarea id="videoDesc" maxlength="500"></textarea>
-      </div>
-      <button type="submit" id="uploadBtn">
-        <span id="uploadText">رفع الفيديو</span>
-        <span id="uploadSpinner" class="loading-spinner" style="display: none;"></span>
-      </button>
+      <button type="submit"><i class="fas fa-upload"></i> رفع الفيديو</button>
     </form>
 
+    <!-- شريط البحث -->
     <div class="search-container">
-      <div class="view-switcher">
-        <button class="view-btn active" onclick="changeView('grid')"><i class="fas fa-th"></i></button>
-        <button class="view-btn" onclick="changeView('list')"><i class="fas fa-list"></i></button>
-      </div>
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="ابحث عن فيديو..." />
-        <button onclick="searchVideos()"><i class="fas fa-search"></i> بحث</button>
-      </div>
-      <div class="filter-container">
-        <div class="filter-group">
-          <label for="categoryFilter">تصنيف:</label>
-          <select id="categoryFilter" onchange="filterVideos()">
-            <option value="">الكل</option>
-            <option value="أخبار">أخبار</option>
-            <option value="رياضة">رياضة</option>
-            <option value="تعليمي">تعليمي</option>
-            <option value="تكنولوجيا">تكنولوجيا</option>
-            <option value="ترفيهي">ترفيهي</option>
-            <option value="رعب">رعب</option>
-            <option value="ألعاب">ألعاب</option>
-            <option value="أخرى">أخرى</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="sortFilter">ترتيب حسب:</label>
-          <select id="sortFilter" onchange="sortVideos()">
-            <option value="newest">الأحدث</option>
-            <option value="oldest">الأقدم</option>
-            <option value="title-asc">العنوان (أ-ي)</option>
-            <option value="title-desc">العنوان (ي-أ)</option>
-            <option value="views">الأكثر مشاهدة</option>
-          </select>
-        </div>
-      </div>
+      <input type="text" id="searchInput" placeholder="ابحث عن فيديو...">
+      <button id="searchBtn"><i class="fas fa-search"></i> بحث</button>
     </div>
 
-    <!-- فيديوهات يتم عرضها -->
-    <div class="video-list" id="videoList"></div>
-
-    <!-- حالة عدم وجود فيديوهات -->
-    <div id="emptyState" class="empty-state" style="display: none;">
-      <i class="fas fa-video-slash"></i>
-      <h3>لا توجد فيديوهات متاحة</h3>
-      <p>ابدأ بإضافة فيديوهات جديدة باستخدام النموذج أعلاه</p>
-    </div>
-
-    <!-- قسم قوائم التشغيل -->
-    <div class="playlists-section" id="playlistsSection">
-      <h2><i class="fas fa-list"></i> قوائم التشغيل</h2>
-      <div id="playlistsContainer"></div>
-      <form id="playlistForm" class="playlist-form">
-        <div class="form-group">
-          <label for="playlistName">اسم قائمة التشغيل</label>
-          <input type="text" id="playlistName" placeholder="أدخل اسم قائمة التشغيل" required />
-        </div>
-        <button type="submit" id="createPlaylistBtn">
-          <span id="createPlaylistText">إنشاء قائمة</span>
-          <span id="createPlaylistSpinner" class="loading-spinner" style="display: none;"></span>
-        </button>
-        <button type="button" onclick="hideCreatePlaylistForm()" class="logout-btn">إلغاء</button>
-      </form>
-      <button onclick="showCreatePlaylistForm()"><i class="fas fa-plus"></i> إنشاء قائمة جديدة</button>
-    </div>
-
-    <!-- قسم التعليقات -->
-    <div class="comments-section" id="commentsSection">
-      <h2><i class="fas fa-comments"></i> التعليقات</h2>
-      <div class="comment-form">
-        <input type="text" id="commentInput" placeholder="أضف تعليقاً..." />
-        <button onclick="addComment()"><i class="fas fa-paper-plane"></i> إضافة</button>
+    <!-- قائمة الفيديوهات -->
+    <div class="video-list-container">
+      <!-- في قسم الفيديوهات في HTML -->
+<div class="video-actions-container">
+  <button id="showAllBtn" class="active">عرض الكل</button>
+  <button id="showBookmarksBtn">عرض المفضلة</button>
+</div>
+      <h2><i class="fas fa-list"></i> الفيديوهات</h2>
+      <div id="videoList" class="video-list"></div>
+      <div id="emptyState" class="empty-state">
+        <i class="fas fa-video-slash"></i>
+        <h3>لا توجد فيديوهات متاحة</h3>
+        <p>ابدأ بإضافة فيديوهات جديدة</p>
       </div>
-      <div class="comments-list" id="commentsList"></div>
     </div>
   </div>
 
   <!-- رسائل التنبيه -->
   <div id="toast" class="toast">
     <i class="fas fa-check-circle"></i>
-    <div id="toastMessage"></div>
-  </div>
-
-  <!-- النص في أسفل يمين الصفحة -->
-  <div style="position: fixed; bottom: 10px; right: 10px; font-size: 0.9rem; color: #888;">
-    إصدار 2.0.1 - تم تطويره بواسطة فهد العنزي 
+    <span id="toastMessage"></span>
   </div>
 
   <script src="script.js"></script>

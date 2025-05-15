@@ -1,762 +1,633 @@
-// ========== DOM Elements ==========
-const themeButton = document.querySelector('.toggle-theme');
+// العناصر الأساسية
+const themeButton = document.getElementById('themeButton');
 const body = document.body;
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const videoForm = document.getElementById('videoForm');
 const videoList = document.getElementById('videoList');
 const loginPage = document.getElementById('authPage');
-const uploadPage = document.getElementById('uploadPage');
+const mainPage = document.getElementById('mainPage');
 const emptyState = document.getElementById('emptyState');
-const toast = document.getElementById('toast');
-const toastMessage = document.getElementById('toastMessage');
-const backToTopBtn = document.querySelector('.back-to-top');
-const playlistsSection = document.getElementById('playlistsSection');
-const commentsSection = document.getElementById('commentsSection');
-const playlistsContainer = document.getElementById('playlistsContainer');
-const commentsList = document.getElementById('commentsList');
+const showRegister = document.getElementById('showRegister');
+const showLogin = document.getElementById('showLogin');
+const logoutBtn = document.getElementById('logoutBtn');
 const confirmModal = document.getElementById('confirmModal');
-const confirmMessage = document.getElementById('confirmMessage');
 const confirmYes = document.getElementById('confirmYes');
 const confirmNo = document.getElementById('confirmNo');
-const playlistForm = document.getElementById('playlistForm');
-const commentInput = document.getElementById('commentInput');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
 
-// ========== Application Data ==========
+// البيانات
 let users = JSON.parse(localStorage.getItem('tubeLinkUsers')) || [];
 let videos = JSON.parse(localStorage.getItem('tubeLinkVideos')) || [];
-let playlists = JSON.parse(localStorage.getItem('tubeLinkPlaylists')) || [];
-let comments = JSON.parse(localStorage.getItem('tubeLinkComments')) || [];
 let currentUser = null;
-let currentView = 'grid';
-let selectedVideoId = null;
-let videoToDelete = null;
+let bookmarks = JSON.parse(localStorage.getItem('tubeLinkBookmarks')) || [];
+let playlists = JSON.parse(localStorage.getItem('tubeLinkPlaylists')) || [];
+let watchLater = JSON.parse(localStorage.getItem('tubeLinkWatchLater')) || [];
+let ratings = JSON.parse(localStorage.getItem('tubeLinkRatings')) || {};
 
-// ========== Initialize App ==========
+// تهيئة التطبيق
 function initApp() {
-  // Load saved theme
+  // تحميل الثيم
   const savedTheme = localStorage.getItem('tubeLinkTheme') || 'dark';
   body.setAttribute('data-theme', savedTheme);
+  updateThemeButton(savedTheme);
+  // في الجزء العلوي مع العناصر الأخرى
+const showAllBtn = document.getElementById('showAllBtn');
+const showBookmarksBtn = document.getElementById('showBookmarksBtn');
+
+// في setupEventListeners()
+showAllBtn.addEventListener('click', showAllVideos);
+showBookmarksBtn.addEventListener('click', showBookmarkedVideos);
+
+// الدوال الجديدة
+function showAllVideos() {
+  showAllBtn.classList.add('active');
+  showBookmarksBtn.classList.remove('active');
+  renderVideos();
+}
+
+function showBookmarkedVideos() {
+  showAllBtn.classList.remove('active');
+  showBookmarksBtn.classList.add('active');
+  const bookmarkedVideos = videos.filter(video => bookmarks.includes(video.id));
+  renderVideos(bookmarkedVideos);
+}
+
+// تعديل دالة البحث لدعم البحث في المفضلة
+function searchVideos() {
+  const searchTerm = searchInput.value.toLowerCase();
+  const currentVideos = showBookmarksBtn.classList.contains('active') ? 
+    videos.filter(v => bookmarks.includes(v.id)) : 
+    videos;
   
-  if (savedTheme === 'light') {
-    themeButton.innerHTML = '<i class="fas fa-sun"></i> تغيير المظهر';
-  }
+  const filtered = currentVideos.filter(video => 
+    video.title.toLowerCase().includes(searchTerm) ||
+    video.category.toLowerCase().includes(searchTerm)
+  );
   
-  // Load sample data if empty
+  renderVideos(filtered);
+}
+  // بيانات تجريبية
   if (users.length === 0) {
-    users = [
-      {
-        id: generateId(),
-        username: 'admin',
-        email: 'admin@example.com',
-        password: hashPassword('admin123'),
-        createdAt: new Date().toISOString()
-      }
-    ];
+    users = [{
+      id: 'admin1',
+      username: 'admin',
+      email: 'admin@example.com',
+      password: 'admin123',
+      createdAt: new Date().toISOString()
+    }];
     saveUsers();
   }
+  // دالة لعرض التعليقات
+function renderComments(videoId) {
+  const commentsContainer = document.getElementById(`comments-${videoId}`);
+  if (!commentsContainer) return;
+
+  commentsContainer.innerHTML = '';
   
-  if (videos.length === 0) {
-    videos = [
-      {
-        id: generateId(),
-        userId: users[0].id,
-        title: 'فيديو تجريبي',
-        url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-        desc: 'هذا فيديو تجريبي لعرض كيفية عمل التطبيق',
-        category: 'ترفيهي',
-        tags: ['تجريبي', 'عرض', 'يوتيوب'],
-        downloadUrl: generateDownloadUrl('https://www.youtube.com/embed/dQw4w9WgXcQ'),
-        createdAt: new Date().toISOString(),
-        views: 0,
-        rating: 4
-      }
-    ];
-    saveVideos();
+  if (!comments[videoId] || comments[videoId].length === 0) {
+    commentsContainer.innerHTML = '<p>لا توجد تعليقات بعد</p>';
+    return;
   }
 
-  if (playlists.length === 0) {
-    playlists = [
-      {
-        id: generateId(),
-        userId: users[0].id,
-        name: 'قائمة التشغيل الافتراضية',
-        videos: [videos[0].id],
-        createdAt: new Date().toISOString()
-      }
-    ];
-    savePlaylists();
+  comments[videoId].forEach(comment => {
+    const user = users.find(u => u.id === comment.userId);
+    const commentElement = document.createElement('div');
+    commentElement.className = 'comment';
+    commentElement.innerHTML = `
+      <div class="comment-header">
+        <strong>${user ? user.username : 'مستخدم مجهول'}</strong>
+        <span>${formatDate(comment.createdAt)}</span>
+      </div>
+      <p>${comment.text}</p>
+      ${comment.userId === currentUser.id ? 
+        `<button class="delete-comment" data-comment-id="${comment.id}" data-video-id="${videoId}">
+          <i class="fas fa-trash"></i>
+        </button>` : ''}
+    `;
+    commentsContainer.appendChild(commentElement);
+  });
+
+  document.querySelectorAll('.delete-comment').forEach(btn => {
+    btn.addEventListener('click', function() {
+      deleteComment(
+        this.getAttribute('data-video-id'),
+        this.getAttribute('data-comment-id')
+      );
+    });
+  });
+}
+
+// دالة لإضافة تعليق
+function addComment(videoId, text) {
+  if (!text.trim()) return;
+
+  if (!comments[videoId]) {
+    comments[videoId] = [];
+  }
+
+  const newComment = {
+    id: generateId(),
+    userId: currentUser.id,
+    text: text.trim(),
+    createdAt: new Date().toISOString()
+  };
+
+  comments[videoId].unshift(newComment);
+  localStorage.setItem('tubeLinkComments', JSON.stringify(comments));
+  renderComments(videoId);
+}
+
+// دالة لحذف تعليق
+function deleteComment(videoId, commentId) {
+  if (!comments[videoId]) return;
+
+  comments[videoId] = comments[videoId].filter(c => c.id !== commentId);
+  localStorage.setItem('tubeLinkComments', JSON.stringify(comments));
+  renderComments(videoId);
+}
+  if (videos.length === 0) {
+    videos = [{
+      id: 'vid1',
+      userId: 'admin1',
+      title: 'فيديو تجريبي',
+      url: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0',
+      category: 'ترفيهي',
+      createdAt: new Date().toISOString(),
+      views: 0
+    }];
+    saveVideos();
   }
   
-  // Check for auto-login
+  // التحقق من تسجيل الدخول التلقائي
   const rememberedUser = localStorage.getItem('tubeLinkRememberedUser');
   if (rememberedUser) {
     const user = users.find(u => u.username === rememberedUser);
     if (user) {
       currentUser = user;
-      loginPage.style.display = 'none';
-      uploadPage.style.display = 'block';
-      renderVideos();
-      renderPlaylists();
-      document.getElementById('username').value = rememberedUser;
-      document.getElementById('rememberMe').checked = true;
+      showMainPage();
     }
   }
   
-  // Scroll event for back-to-top button
-  window.addEventListener('scroll', () => {
-    if (window.pageYOffset > 300) {
-      backToTopBtn.classList.add('show');
-    } else {
-      backToTopBtn.classList.remove('show');
-    }
-  });
-
-  // Enter key for comments
-  commentInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      addComment();
-    }
-  });
+  setupEventListeners();
+  checkAutoDarkMode();
 }
 
-// ========== UI Functions ==========
-function toggleTheme() {
-  if (body.getAttribute('data-theme') === 'dark') {
-    body.setAttribute('data-theme', 'light');
-    themeButton.innerHTML = '<i class="fas fa-sun"></i> تغيير المظهر';
-  } else {
-    body.setAttribute('data-theme', 'dark');
-    themeButton.innerHTML = '<i class="fas fa-moon"></i> تغيير المظهر';
-  }
-  localStorage.setItem('tubeLinkTheme', body.getAttribute('data-theme'));
-}
-
-function showToast(message, type = 'success') {
-  const toastIcon = toast.querySelector('i');
+// إعداد مستمعي الأحداث
+function setupEventListeners() {
+  // تبديل الثيم
+  themeButton.addEventListener('click', toggleTheme);
   
-  toast.className = `toast ${type}`;
-  toastMessage.textContent = message;
+  // تسجيل الدخول
+  loginForm.addEventListener('submit', handleLogin);
   
-  if (type === 'success') {
-    toastIcon.className = 'fas fa-check-circle';
-  } else if (type === 'error') {
-    toastIcon.className = 'fas fa-exclamation-circle';
-  } else if (type === 'info') {
-    toastIcon.className = 'fas fa-info-circle';
-  } else if (type === 'warning') {
-    toastIcon.className = 'fas fa-exclamation-triangle';
-  }
+  // التسجيل
+  registerForm.addEventListener('submit', handleRegister);
   
-  toast.classList.add('show');
+  // إضافة فيديو
+  videoForm.addEventListener('submit', handleAddVideo);
   
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3000);
-}
-
-function showRegisterForm() {
-  document.getElementById('loginFormContainer').style.display = 'none';
-  document.getElementById('registerFormContainer').style.display = 'block';
-}
-
-function showLoginForm() {
-  document.getElementById('loginFormContainer').style.display = 'block';
-  document.getElementById('registerFormContainer').style.display = 'none';
-}
-
-function scrollToTop() {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
+  // تبديل النماذج
+  showRegister.addEventListener('click', showRegisterForm);
+  showLogin.addEventListener('click', showLoginForm);
+  
+  // تسجيل الخروج
+  logoutBtn.addEventListener('click', logout);
+  
+  // البحث
+  searchBtn.addEventListener('click', searchVideos);
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') searchVideos();
   });
 }
 
-function changeView(view) {
-  currentView = view;
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  event.target.classList.add('active');
-  renderVideos();
-}
-
-function showConfirm(message, callback) {
-  confirmMessage.textContent = message;
-  confirmModal.classList.add('show');
-  
-  confirmYes.onclick = function() {
-    confirmModal.classList.remove('show');
-    callback(true);
-  };
-  
-  confirmNo.onclick = function() {
-    confirmModal.classList.remove('show');
-    callback(false);
-  };
-}
-
-// ========== Authentication ==========
-loginForm.addEventListener('submit', async function (e) {
+// معالجة تسجيل الدخول
+function handleLogin(e) {
   e.preventDefault();
-  const username = document.getElementById('username').value.trim();
+  const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
   const rememberMe = document.getElementById('rememberMe').checked;
-
-  // Show loading state
-  document.getElementById('loginText').style.display = 'none';
-  document.getElementById('loginSpinner').style.display = 'inline-block';
-  document.getElementById('loginBtn').disabled = true;
-
-  // Simulate server request
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  const hashedPassword = await hashPassword(password);
-  const user = users.find(u => u.username === username && u.password === hashedPassword);
-
+  
+  const user = users.find(u => u.username === username && u.password === password);
+  
   if (user) {
     currentUser = user;
-    
     if (rememberMe) {
       localStorage.setItem('tubeLinkRememberedUser', username);
-    } else {
-      localStorage.removeItem('tubeLinkRememberedUser');
     }
-    
-    loginPage.style.display = 'none';
-    uploadPage.style.display = 'block';
-    renderVideos();
-    renderPlaylists();
-    showToast(`مرحباً ${username}!`, 'success');
+    showMainPage();
+    showToast('تم تسجيل الدخول بنجاح', 'success');
   } else {
     showToast('اسم المستخدم أو كلمة المرور غير صحيحة', 'error');
   }
+}
 
-  // Hide loading state
-  document.getElementById('loginText').style.display = 'inline-block';
-  document.getElementById('loginSpinner').style.display = 'none';
-  document.getElementById('loginBtn').disabled = false;
-});
-
-registerForm.addEventListener('submit', async function (e) {
+// معالجة التسجيل
+function handleRegister(e) {
   e.preventDefault();
-  const username = document.getElementById('registerUsername').value.trim();
-  const email = document.getElementById('email').value.trim();
+  const username = document.getElementById('registerUsername').value;
+  const email = document.getElementById('email').value;
   const password = document.getElementById('registerPassword').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
-
-  // Validate passwords
+  
   if (password !== confirmPassword) {
     showToast('كلمتا المرور غير متطابقتين', 'error');
     return;
   }
-
-  // Check if username exists
+  
   if (users.some(u => u.username === username)) {
     showToast('اسم المستخدم موجود مسبقاً', 'error');
     return;
   }
-
-  // Validate email
-  if (!isValidEmail(email)) {
-    showToast('البريد الإلكتروني غير صالح', 'error');
-    return;
-  }
-
-  // Show loading state
-  document.getElementById('registerText').style.display = 'none';
-  document.getElementById('registerSpinner').style.display = 'inline-block';
-  document.getElementById('registerBtn').disabled = true;
-
-  // Simulate server request
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Create new user
+  
   const newUser = {
     id: generateId(),
     username,
     email,
-    password: await hashPassword(password),
+    password,
     createdAt: new Date().toISOString()
   };
   
   users.push(newUser);
   saveUsers();
-  
-  showToast('تم إنشاء الحساب بنجاح!', 'success');
   showLoginForm();
-  
-  // Hide loading state
-  document.getElementById('registerText').style.display = 'inline-block';
-  document.getElementById('registerSpinner').style.display = 'none';
-  document.getElementById('registerBtn').disabled = false;
-  
-  // Reset form
-  registerForm.reset();
-});
-
-function logout() {
-  showConfirm('هل أنت متأكد من تسجيل الخروج؟', (confirmed) => {
-    if (confirmed) {
-      currentUser = null;
-      uploadPage.style.display = 'none';
-      loginPage.style.display = 'block';
-      showToast('تم تسجيل الخروج بنجاح', 'success');
-    }
-  });
+  showToast('تم إنشاء الحساب بنجاح', 'success');
 }
 
-// ========== Video Functions ==========
-videoForm.addEventListener('submit', async function (e) {
+// معالجة إضافة فيديو
+function handleAddVideo(e) {
   e.preventDefault();
   const title = document.getElementById('videoTitle').value.trim();
-  let url = document.getElementById('videoUrl').value.trim();
+  const url = document.getElementById('videoUrl').value.trim();
   const category = document.getElementById('videoCategory').value;
-  const desc = document.getElementById('videoDesc').value.trim();
-  const tags = document.getElementById('videoTags').value.split(',').map(t => t.trim()).filter(t => t);
-
-  // Validate YouTube URL
-  if (!isValidYouTubeUrl(url)) {
-    showToast('الرجاء إدخال رابط YouTube صالح', 'error');
+  
+  if (!title || !url || !category) {
+    showToast('الرجاء ملء جميع الحقول', 'error');
     return;
   }
 
-  // Convert to embed URL
-  url = convertToEmbedUrl(url);
+  const embedUrl = convertToEmbedUrl(url);
+  if (!embedUrl) {
+    showToast('رابط اليوتيوب غير صالح', 'error');
+    return;
+  }
 
-  // Show loading state
-  document.getElementById('uploadText').style.display = 'none';
-  document.getElementById('uploadSpinner').style.display = 'inline-block';
-  document.getElementById('uploadBtn').disabled = true;
-
-  // Simulate server request
-  await new Promise(resolve => setTimeout(resolve, 800));
-
-  const video = { 
+  const newVideo = {
     id: generateId(),
     userId: currentUser.id,
-    title, 
-    url, 
-    desc,
+    title,
+    url: embedUrl,
     category,
-    tags,
-    downloadUrl: generateDownloadUrl(url),
     createdAt: new Date().toISOString(),
-    views: 0,
-    rating: 0
+    views: 0
   };
-  
-  videos.unshift(video);
+
+  videos.unshift(newVideo);
   saveVideos();
   renderVideos();
   videoForm.reset();
+  showToast('تم رفع الفيديو بنجاح', 'success');
+}
+
+// البحث عن الفيديوهات
+function searchVideos() {
+  const searchTerm = searchInput.value.toLowerCase();
+  const filtered = videos.filter(video => 
+    video.title.toLowerCase().includes(searchTerm) ||
+    video.category.toLowerCase().includes(searchTerm)
+  );
   
-  showToast('تم رفع الفيديو بنجاح!', 'success');
-  
-  // Hide loading state
-  document.getElementById('uploadText').style.display = 'inline-block';
-  document.getElementById('uploadSpinner').style.display = 'none';
-  document.getElementById('uploadBtn').disabled = false;
-});
+  renderVideos(filtered);
+}
 
-function renderVideos(searchTerm = '', category = '', sortBy = 'newest') {
-  let filteredVideos = videos.filter(video => {
-    const matchesSearch = video.title.toLowerCase().includes(searchTerm) || 
-                        video.desc.toLowerCase().includes(searchTerm) ||
-                        (video.tags && video.tags.some(tag => tag.toLowerCase().includes(searchTerm)));
-    const matchesCategory = !category || video.category === category;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Sort videos
-  switch (sortBy) {
-    case 'newest':
-      filteredVideos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      break;
-    case 'oldest':
-      filteredVideos.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      break;
-    case 'title-asc':
-      filteredVideos.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-    case 'title-desc':
-      filteredVideos.sort((a, b) => b.title.localeCompare(a.title));
-      break;
-    case 'views':
-      filteredVideos.sort((a, b) => b.views - a.views);
-      break;
-  }
-
+// عرض الفيديوهات
+function renderVideos(filteredVideos = videos) {
   videoList.innerHTML = '';
   
-  // Apply view style
-  if (currentView === 'list') {
-    videoList.classList.add('list-view');
-  } else {
-    videoList.classList.remove('list-view');
-  }
-
   if (filteredVideos.length === 0) {
     emptyState.style.display = 'block';
     return;
   }
-
+  
   emptyState.style.display = 'none';
-
-  filteredVideos.forEach((video) => {
+  
+  filteredVideos.forEach(video => {
     const videoCard = document.createElement('div');
-    videoCard.classList.add('video-card');
+    videoCard.className = 'video-card';
+    
+    videoCard.innerHTML = `
+      <div class="video-container">
+        <iframe src="${video.url}" frameborder="0" allowfullscreen></iframe>
+      </div>
+      <div class="video-info">
+        <h3>${video.title}</h3>
+        <p>${video.category} • ${formatDate(video.createdAt)}</p>
+        <div class="video-actions">
+          ${video.userId === currentUser.id ? 
+            `<button class="delete-btn" data-id="${video.id}"><i class="fas fa-trash"></i> حذف</button>` : ''}
+          <button class="share-btn" data-url="${video.url}"><i class="fas fa-share-alt"></i> مشاركة</button>
+          <button class="bookmark-btn" data-id="${video.id}">
+            <i class="${bookmarks.includes(video.id) ? 'fas' : 'far'} fa-bookmark"></i>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    videoList.appendChild(videoCard);
+  });
 
-    // Add category badge
-    if (video.category) {
-      const categoryBadge = document.createElement('div');
-      categoryBadge.classList.add('video-category');
-      categoryBadge.textContent = video.category;
-      videoCard.appendChild(categoryBadge);
+  // إضافة مستمعي الأحداث
+  addEventListenersToButtons();
+  // التعليقات
+document.querySelectorAll('.toggle-comments').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const videoId = this.getAttribute('data-video-id');
+    const commentsSection = this.closest('.video-card').querySelector('.comments-section');
+    
+    if (commentsSection.style.display === 'none') {
+      commentsSection.style.display = 'block';
+      renderComments(videoId);
+    } else {
+      commentsSection.style.display = 'none';
     }
+  });
+});
 
-    const iframe = document.createElement('iframe');
-    iframe.src = video.url;
-    iframe.title = video.title;
-    iframe.allowFullscreen = true;
-    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+// معالجة إرسال التعليقات
+document.addEventListener('submit', function(e) {
+  if (e.target.classList.contains('add-comment-form')) {
+    e.preventDefault();
+    const videoId = e.target.closest('.comments-section').getAttribute('data-video-id');
+    const input = e.target.querySelector('input');
+    addComment(videoId, input.value);
+    input.value = '';
+  }
+});
+}
 
-    const title = document.createElement('div');
-    title.classList.add('video-title');
-    title.textContent = video.title;
-
-    const desc = document.createElement('div');
-    desc.classList.add('video-desc');
-    desc.textContent = video.desc || 'لا يوجد وصف';
-
-    const meta = document.createElement('div');
-    meta.classList.add('video-meta');
-
-    const date = document.createElement('span');
-    date.textContent = formatDate(video.createdAt);
-
-    const views = document.createElement('span');
-    views.textContent = `${video.views} مشاهدات`;
-
-    meta.appendChild(date);
-    meta.appendChild(views);
-
-    // Add tags
-    if (video.tags && video.tags.length > 0) {
-      const tagsContainer = document.createElement('div');
-      tagsContainer.classList.add('video-tags');
-      
-      video.tags.forEach(tag => {
-        const tagElement = document.createElement('span');
-        tagElement.classList.add('video-tag');
-        tagElement.textContent = tag;
-        tagsContainer.appendChild(tagElement);
-      });
-      
-      if (currentView === 'list') {
-        desc.after(tagsContainer);
-      } else {
-        meta.after(tagsContainer);
-      }
-    }
-
-    // Add rating
-    const ratingContainer = document.createElement('div');
-    ratingContainer.classList.add('rating');
-    
-    for (let i = 1; i <= 5; i++) {
-      const star = document.createElement('i');
-      star.classList.add('rating-star', 'fas', 'fa-star');
-      if (i <= Math.round(video.rating)) {
-        star.classList.add('active');
-      }
-      star.dataset.value = i;
-      star.addEventListener('click', () => rateVideo(video.id, i));
-      ratingContainer.appendChild(star);
-    }
-    
-    meta.before(ratingContainer);
-
-    const progressContainer = document.createElement('div');
-    progressContainer.classList.add('progress-container');
-    progressContainer.id = `progress-${video.id}`;
-    
-    const progressBar = document.createElement('div');
-    progressBar.classList.add('progress-bar');
-    progressBar.id = `progress-bar-${video.id}`;
-    
-    progressContainer.appendChild(progressBar);
-
-    const videoActions = document.createElement('div');
-    videoActions.classList.add('video-actions');
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('delete-btn');
-    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> حذف';
-    deleteBtn.addEventListener('click', () => {
-      videoToDelete = video.id;
-      showConfirm(`هل أنت متأكد من حذف الفيديو "${video.title}"؟`, (confirmed) => {
+// إضافة مستمعي الأحداث للأزرار
+function addEventListenersToButtons() {
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const videoId = this.getAttribute('data-id');
+      showConfirmModal('هل أنت متأكد من حذف هذا الفيديو؟', (confirmed) => {
         if (confirmed) {
-          videos = videos.filter(v => v.id !== videoToDelete);
-          saveVideos();
-          renderVideos();
-          showToast('تم حذف الفيديو', 'success');
+          deleteVideo(videoId);
         }
       });
     });
-
-    const downloadBtn = document.createElement('button');
-    downloadBtn.classList.add('download-btn');
-    downloadBtn.innerHTML = '<i class="fas fa-download"></i> تحميل';
-    downloadBtn.addEventListener('click', () => {
-      downloadVideo(video);
+  });
+  
+  document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const url = this.getAttribute('data-url');
+      shareVideo(url);
     });
-
-    const shareBtn = document.createElement('button');
-    shareBtn.classList.add('share-btn');
-    shareBtn.innerHTML = '<i class="fas fa-share-alt"></i> مشاركة';
-    shareBtn.addEventListener('click', () => {
-      shareVideo(video.id);
+  });
+  
+  document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const videoId = this.getAttribute('data-id');
+      toggleBookmark(videoId);
     });
-
-    // Show delete button only for video owner
-    if (currentUser && video.userId === currentUser.id) {
-      videoActions.appendChild(deleteBtn);
-    }
-    videoActions.appendChild(downloadBtn);
-    videoActions.appendChild(shareBtn);
-
-    if (currentView === 'list') {
-      const videoContent = document.createElement('div');
-      videoContent.classList.add('video-content');
-      
-      videoContent.appendChild(title);
-      videoContent.appendChild(desc);
-      videoContent.appendChild(meta);
-      videoContent.appendChild(progressContainer);
-      videoContent.appendChild(videoActions);
-      
-      videoCard.appendChild(iframe);
-      videoCard.appendChild(videoContent);
-    } else {
-      videoCard.appendChild(iframe);
-      videoCard.appendChild(title);
-      videoCard.appendChild(desc);
-      videoCard.appendChild(meta);
-      videoCard.appendChild(progressContainer);
-      videoCard.appendChild(videoActions);
-    }
-
-    videoList.appendChild(videoCard);
   });
 }
+let comments = JSON.parse(localStorage.getItem('tubeLinkComments')) || {};
 
+function addComment(videoId, text) {
+  if (!comments[videoId]) {
+    comments[videoId] = [];
+  }
+  
+  comments[videoId].push({
+    id: generateId(),
+    userId: currentUser.id,
+    text: text,
+    createdAt: new Date().toISOString()
+  });
+  
+  localStorage.setItem('tubeLinkComments', JSON.stringify(comments));
+}
+let notifications = JSON.parse(localStorage.getItem('tubeLinkNotifications')) || [];
+
+function addNotification(userId, message) {
+  notifications.push({
+    userId: userId,
+    message: message,
+    read: false,
+    createdAt: new Date().toISOString()
+  });
+  
+  localStorage.setItem('tubeLinkNotifications', JSON.stringify(notifications));
+}
+function hashPassword(password) {
+  // هذه دالة مبسطة - في التطبيق الحقيقي استخدم مكتبة مثل bcrypt
+  return btoa(encodeURIComponent(password));
+}
+function checkPermission(userId, resourceUserId) {
+  return userId === resourceUserId;
+}
+// تعديل دالة التسجيل
+const hashedPassword = hashPassword(password);
+const newUser = {
+  // ...
+  password: hashedPassword
+};
+// حذف الفيديو
+function deleteVideo(videoId) {
+  videos = videos.filter(v => v.id !== videoId);
+  saveVideos();
+  renderVideos();
+  showToast('تم حذف الفيديو', 'success');
+}
 function rateVideo(videoId, rating) {
-  const video = videos.find(v => v.id === videoId);
-  if (video) {
-    video.rating = rating;
-    saveVideos();
-    renderVideos();
-    showToast('شكراً لتقييمك الفيديو!', 'success');
+  if (!ratings[videoId]) {
+    ratings[videoId] = [];
   }
-}
-
-async function downloadVideo(video) {
-  try {
-    const progressContainer = document.getElementById(`progress-${video.id}`);
-    const progressBar = document.getElementById(`progress-bar-${video.id}`);
-    
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-
-    // Increase views
-    video.views++;
-    saveVideos();
-
-    // Simulate download
-    await simulateDownload(progressBar);
-    
-    progressContainer.style.display = 'none';
-    showToast(`تم تحميل الفيديو "${video.title}"`, 'success');
-    
-    // Open download link
-    window.open(video.downloadUrl, '_blank');
-  } catch (error) {
-    showToast('حدث خطأ أثناء التحميل', 'error');
-    console.error('Download error:', error);
+  
+  const userRating = ratings[videoId].find(r => r.userId === currentUser.id);
+  if (userRating) {
+    userRating.rating = rating;
+  } else {
+    ratings[videoId].push({
+      userId: currentUser.id,
+      rating: rating
+    });
   }
+  
+  localStorage.setItem('tubeLinkRatings', JSON.stringify(ratings));
+  showToast('تم تسجيل تقييمك', 'success');
 }
-
-function shareVideo(videoId) {
-  const video = videos.find(v => v.id === videoId);
+// مشاركة الفيديو
+function shareVideo(url) {
   if (navigator.share) {
     navigator.share({
-      title: video.title,
-      text: video.desc,
-      url: window.location.href + '?video=' + videoId
-    }).catch(err => {
+      title: 'شاهد هذا الفيديو',
+      url: url
+    }).catch(() => {
       showToast('تم إلغاء المشاركة', 'error');
     });
   } else {
-    prompt('انسخ الرابط لمشاركة الفيديو:', window.location.href + '?video=' + videoId);
+    prompt('انسخ الرابط لمشاركة الفيديو:', url);
   }
 }
 
-function searchVideos() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  renderVideos(searchTerm);
+// إضافة/إزالة من المفضلة
+function toggleBookmark(videoId) {
+  if (bookmarks.includes(videoId)) {
+    bookmarks = bookmarks.filter(id => id !== videoId);
+    showToast('تم إزالة الفيديو من المفضلة', 'info');
+  } else {
+    bookmarks.push(videoId);
+    showToast('تم إضافة الفيديو إلى المفضلة', 'success');
+  }
+  localStorage.setItem('tubeLinkBookmarks', JSON.stringify(bookmarks));
+  renderVideos();
 }
 
-function filterVideos() {
-  const category = document.getElementById('categoryFilter').value;
-  renderVideos('', category);
-}
-
-function sortVideos() {
-  const sortBy = document.getElementById('sortFilter').value;
-  renderVideos('', '', sortBy);
-}
-
-// ========== Playlist Functions ==========
-function renderPlaylists() {
-  playlistsContainer.innerHTML = '';
+// نافذة التأكيد
+function showConfirmModal(message, callback) {
+  const confirmMessage = document.getElementById('confirmMessage');
+  confirmMessage.textContent = message;
   
-  if (playlists.length === 0) {
-    playlistsContainer.innerHTML = '<p>لا توجد قوائم تشغيل</p>';
-    return;
-  }
-
-  playlists.forEach(playlist => {
-    const playlistCard = document.createElement('div');
-    playlistCard.classList.add('playlist-card');
-    playlistCard.innerHTML = `
-      <h3>${playlist.name}</h3>
-      <p>${playlist.videos.length} فيديو</p>
-    `;
-    playlistCard.addEventListener('click', () => viewPlaylist(playlist.id));
-    playlistsContainer.appendChild(playlistCard);
-  });
-}
-
-function viewPlaylist(playlistId) {
-  const playlist = playlists.find(p => p.id === playlistId);
-  if (!playlist) return;
-
-  // Filter videos in the playlist
-  const playlistVideos = videos.filter(video => 
-    playlist.videos.includes(video.id)
-  );
-
-  // Show videos
-  renderVideos('', '', 'newest', playlistVideos);
-  showToast(`عرض قائمة التشغيل: ${playlist.name}`, 'info');
-}
-
-function showCreatePlaylistForm() {
-  playlistForm.classList.add('show');
-  document.querySelector('#playlistsSection button:last-child').style.display = 'none';
-}
-
-function hideCreatePlaylistForm() {
-  playlistForm.classList.remove('show');
-  document.querySelector('#playlistsSection button:last-child').style.display = 'block';
-  playlistForm.reset();
-}
-
-playlistForm.addEventListener('submit', function(e) {
-  e.preventDefault();
-  const name = document.getElementById('playlistName').value.trim();
+  confirmModal.classList.add('show');
   
-  if (!name) {
-    showToast('الرجاء إدخال اسم قائمة التشغيل', 'error');
-    return;
-  }
-
-  const newPlaylist = {
-    id: generateId(),
-    userId: currentUser.id,
-    name,
-    videos: [],
-    createdAt: new Date().toISOString()
+  confirmYes.onclick = function() {
+    callback(true);
+    confirmModal.classList.remove('show');
   };
   
-  playlists.push(newPlaylist);
-  savePlaylists();
-  renderPlaylists();
-  hideCreatePlaylistForm();
-  showToast('تم إنشاء قائمة التشغيل بنجاح', 'success');
-});
-
-// ========== Comment Functions ==========
-function addComment() {
-  const commentText = commentInput.value.trim();
-  if (!commentText || !selectedVideoId) {
-    showToast('الرجاء إدخال نص التعليق', 'error');
-    return;
-  }
-
-  const newComment = {
-    id: generateId(),
-    videoId: selectedVideoId,
-    userId: currentUser.id,
-    username: currentUser.username,
-    text: commentText,
-    createdAt: new Date().toISOString()
+  confirmNo.onclick = function() {
+    callback(false);
+    confirmModal.classList.remove('show');
   };
-
-  comments.push(newComment);
-  saveComments();
-  renderComments();
-  commentInput.value = '';
-  showToast('تم إضافة التعليق', 'success');
 }
 
-function renderComments() {
-  commentsList.innerHTML = '';
+// تبديل الثيم
+function toggleTheme() {
+  const currentTheme = body.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  body.setAttribute('data-theme', newTheme);
+  localStorage.setItem('tubeLinkTheme', newTheme);
+  updateThemeButton(newTheme);
   
-  const videoComments = comments
-    .filter(c => c.videoId === selectedVideoId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  if (videoComments.length === 0) {
-    commentsList.innerHTML = '<p>لا توجد تعليقات</p>';
-    return;
-  }
-
-  videoComments.forEach(comment => {
-    const commentElement = document.createElement('div');
-    commentElement.classList.add('comment');
-    commentElement.innerHTML = `
-      <div class="comment-author">${comment.username}</div>
-      <div class="comment-text">${comment.text}</div>
-      <small>${formatDate(comment.createdAt)}</small>
-    `;
-    commentsList.appendChild(commentElement);
+  // إعادة تطبيق الأنماط على العناصر الديناميكية
+  document.querySelectorAll('.video-card').forEach(card => {
+    card.style.backgroundColor = newTheme === 'dark' ? '#1e1e1e' : '#ffffff';
   });
 }
+function managePlaylists(videoId = null) {
+  const modal = document.getElementById('playlistModal');
+  const container = document.getElementById('playlistsContainer');
+  
+  container.innerHTML = playlists.map(playlist => `
+    <div class="playlist-item">
+      <h4>${playlist.name} (${playlist.videos.length})</h4>
+      ${videoId ? `
+        <button onclick="addToPlaylist('${playlist.id}', '${videoId}')" 
+          ${playlist.videos.includes(videoId) ? 'disabled' : ''}>
+          ${playlist.videos.includes(videoId) ? 'مضاف' : 'إضافة'}
+        </button>
+      ` : ''}
+    </div>
+  `).join('');
+  
+  modal.style.display = 'block';
+}
 
-// ========== Helper Functions ==========
+function updateThemeButton(theme) {
+  const icon = themeButton.querySelector('i');
+  icon.className = theme === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+}
+
+// التحقق من الوضع الليلي التلقائي
+function checkAutoDarkMode() {
+  const hour = new Date().getHours();
+  const isNightTime = hour > 18 || hour < 6;
+  if (isNightTime && body.getAttribute('data-theme') !== 'dark') {
+    toggleTheme();
+  }
+}
+
+// تحويل رابط اليوتيوب
+function convertToEmbedUrl(url) {
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? 
+    `https://www.youtube-nocookie.com/embed/${match[2]}?rel=0` : null;
+}
+
+// عرض الصفحة الرئيسية
+function showMainPage() {
+  loginPage.style.display = 'none';
+  mainPage.style.display = 'block';
+  renderVideos();
+}
+function openVideoModal(videoUrl) {
+  const modal = document.getElementById('videoPlayerModal');
+  const videoFrame = document.getElementById('modalVideoFrame');
+  
+  videoFrame.src = videoUrl;
+  modal.style.display = 'block';
+  
+  // زيادة عدد المشاهدات
+  const video = videos.find(v => v.url === videoUrl);
+  if (video) {
+    video.views++;
+    saveVideos();
+  }
+}
+// عرض نموذج التسجيل
+function showRegisterForm(e) {
+  if (e) e.preventDefault();
+  document.getElementById('loginFormContainer').style.display = 'none';
+  document.getElementById('registerFormContainer').style.display = 'block';
+}
+
+// عرض نموذج تسجيل الدخول
+function showLoginForm(e) {
+  if (e) e.preventDefault();
+  document.getElementById('registerFormContainer').style.display = 'none';
+  document.getElementById('loginFormContainer').style.display = 'block';
+}
+
+// تسجيل الخروج
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('tubeLinkRememberedUser');
+  loginPage.style.display = 'block';
+  mainPage.style.display = 'none';
+  showLoginForm();
+  showToast('تم تسجيل الخروج بنجاح', 'success');
+}
+
+// رسائل التنبيه
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  const toastMessage = document.getElementById('toastMessage');
+  const icon = toast.querySelector('i');
+  
+  toast.className = `toast ${type}`;
+  toastMessage.textContent = message;
+  icon.className = type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+  
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// توليد ID
 function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return Math.random().toString(36).substr(2, 9);
 }
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + 'tubeLinkSalt');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
+// تنسيق التاريخ
 function formatDate(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString('ar-EG', options);
 }
 
+// حفظ البيانات
 function saveUsers() {
   localStorage.setItem('tubeLinkUsers', JSON.stringify(users));
 }
@@ -765,110 +636,5 @@ function saveVideos() {
   localStorage.setItem('tubeLinkVideos', JSON.stringify(videos));
 }
 
-function savePlaylists() {
-  localStorage.setItem('tubeLinkPlaylists', JSON.stringify(playlists));
-}
-
-function saveComments() {
-  localStorage.setItem('tubeLinkComments', JSON.stringify(comments));
-}
-
-function simulateDownload(progressBar) {
-  return new Promise((resolve) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 10 + 5;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        progressBar.style.width = `${progress}%`;
-        setTimeout(resolve, 300);
-      } else {
-        progressBar.style.width = `${progress}%`;
-      }
-    }, 200);
-  });
-}
-
-function convertToEmbedUrl(url) {
-    let videoId = '';
-    
-    // استخراج ID الفيديو من جميع أنواع الروابط
-    const patterns = [
-      { regex: /youtube\.com\/watch\?v=([^&]+)/, index: 1 },
-      { regex: /youtu\.be\/([^?]+)/, index: 1 },
-      { regex: /youtube\.com\/embed\/([^?]+)/, index: 1 },
-      { regex: /youtube\.com\/shorts\/([^?]+)/, index: 1 }
-    ];
-  
-    for (const pattern of patterns) {
-      const match = url.match(pattern.regex);
-      if (match) {
-        videoId = match[pattern.index];
-        break;
-      }
-    }
-  
-    if (!videoId) {
-      showToast('رابط اليوتيوب غير صالح', 'error');
-      return '';
-    }
-  
-    // تنظيف ID الفيديو
-    videoId = videoId.split(/[?&/#]/)[0];
-  
-    // قائمة سيرفرات Invidious الاحتياطية (تحديث 2023)
-    const invidiousServers = [
-      'https://invidious.snopyta.org',
-      'https://invidious.private.co',
-      'https://yt.artemislena.eu',
-      'https://invidious.lunar.icu'
-    ];
-  
-    // اختيار سيرفر عشوائي
-    const server = invidiousServers[Math.floor(Math.random() * invidiousServers.length)];
-    
-    // معلمات التشغيل
-    const params = new URLSearchParams({
-      autoplay: 1,
-      rel: 0,               // إخفاء الفيديوهات المقترحة
-      modestbranding: 1,    // تقليل شعار يوتيوب
-      fs: 0,                // إخفاء زر الملء الشاشة
-      iv_load_policy: 3,    // إخفاء الشروحات
-      disablekb: 1          // تعطيل مفاتيح التحكم
-    });
-  
-    return `${server}/embed/${videoId}?${params.toString()}`;
-  }
-
-function isValidYouTubeUrl(url) {
-  const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-  return pattern.test(url);
-}
-
-function isValidEmail(email) {
-  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return pattern.test(email);
-}
-
-function generateDownloadUrl(youtubeUrl) {
-  const videoId = youtubeUrl.split('/embed/')[1] || youtubeUrl.split('v=')[1].split('&')[0];
-  return `https://example.com/download?videoId=${videoId}&user=${currentUser?.id || 'guest'}`;
-}
-
-// Initialize the application
+// بدء التطبيق
 document.addEventListener('DOMContentLoaded', initApp);
-
-async function updateInvidiousServers() {
-    try {
-      const response = await fetch('https://api.invidious.io/instances.json');
-      const servers = await response.json();
-      // تصفية السيرفرات العاملة
-      return servers
-        .filter(server => server[1].type === 'https')
-        .map(server => `https://${server[1].uri}`);
-    } catch (error) {
-      console.error('Failed to update servers:', error);
-      return []; // العودة للقائمة الافتراضية
-    }
-  }
