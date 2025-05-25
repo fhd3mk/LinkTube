@@ -157,7 +157,240 @@
       </div>
     </div>
   </div>
+<!-- ضيف هذا الكود قبل نهاية وسم body -->
+<div class="ai-assistant">
+  <div class="ai-chatbox" id="aiChatbox">
+    <div class="ai-header">
+      <span>المساعد الذكي</span>
+      <button id="closeAiChat" style="background:none;border:none;color:white;cursor:pointer;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="ai-messages" id="aiMessages">
+      <div class="ai-message ai-response">
+        مرحبا! أنا المساعد الذكي لـ TubeLink. كيف يمكنني مساعدتك؟
+      </div>
+    </div>
+    <div class="ai-input-container">
+      <input type="text" class="ai-input" id="aiInput" placeholder="اكتب رسالتك هنا...">
+      <button class="ai-send" id="aiSend">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+  <button class="ai-toggle" id="aiToggle">
+    <i class="fas fa-robot"></i>
+  </button>
+</div>
 
+<style>
+/* أنماط الذكاء الاصطناعي فقط */
+.ai-assistant {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.ai-toggle {
+  background-color: #FF4500;
+  color: white;
+  border: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-chatbox {
+  display: none;
+  width: 350px;
+  max-height: 500px;
+  background-color: #1e1e1e;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.ai-chatbox.active {
+  display: flex;
+}
+
+.ai-header {
+  background-color: #FF4500;
+  color: white;
+  padding: 15px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-message {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 18px;
+  line-height: 1.5;
+}
+
+.user-message {
+  align-self: flex-end;
+  background-color: #FF4500;
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+
+.ai-response {
+  align-self: flex-start;
+  background-color: #333;
+  color: white;
+  border-bottom-left-radius: 5px;
+}
+
+.ai-input-container {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #444;
+}
+
+.ai-input {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 25px;
+  background-color: #333;
+  color: white;
+  outline: none;
+}
+
+.ai-send {
+  background: none;
+  border: none;
+  color: #FF4500;
+  font-size: 20px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+</style>
+
+<script>
+// كود الذكاء الاصطناعي فقط
+class ArabicAI {
+  constructor() {
+    this.knowledge = {
+      "اهلا": ["أهلاً وسهلاً بك في TubeLink!", "مرحباً! كيف يمكنني مساعدتك اليوم؟"],
+      "مرحبا": ["أهلاً بك! هل تبحث عن فيديو معين؟", "مرحباً! أنا هنا لمساعدتك في موقع TubeLink"],
+      "سعودية": ["مرحباً! يمكنك رفع فيديوهات سعودية بسهولة:\n1) املأ بيانات الفيديو\n2) اختر تصنيف 'سعودي'\n3) اضغط رفع الفيديو"],
+      "كيف ابحث عن فيديو": "اذهب لأعلى الصفحة وضع اسم الفيديو في خانة البحث، ثم اضغط زر البحث",
+      "كيف ارفع فيديو": [
+        "لرفع فيديو جديد:\n1) في الاعلى املأ عنوان الفيديو\n2) ضع رابط مقطع اليوتيوب في الخانة المخصصة\n3) اختر التصنيف المناسب\n4) اضغط 'رفع الفيديو'",
+        "خطوات الرفع:\n- اكتب اسم الفيديو\n- الصق الرابط\n- اختر تصنيف\n- انقر زر الرفع"
+      ]
+    };
+  }
+
+
+  async searchWeb(query) {
+    try {
+      const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`);
+      const data = await response.json();
+      
+      if (data.AbstractText) {
+        return data.AbstractText;
+      } else if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        return data.RelatedTopics[0].Text;
+      }
+      return "لم أجد إجابة مباشرة، هل يمكنك إعادة صياغة السؤال؟";
+    } catch (error) {
+      return "عذراً، حدث خطأ أثناء البحث. يرجى المحاولة لاحقاً.";
+    }
+  }
+
+  async respond(message) {
+    message = message.toLowerCase().replace('؟', '').replace('?', '').trim();
+    
+    if (this.knowledge[message]) {
+      return this.knowledge[message][Math.floor(Math.random() * this.knowledge[message].length)];
+    }
+    
+    if (message.includes("بحث") || message.includes("فيديو")) {
+      return "للبحث عن فيديوهات في TubeLink:\n1) اذهب لشريط البحث بالأعلى\n2) اكتب كلمات مفتاحية\n3) اضغط زر البحث أو Enter";
+    }
+    
+    if (message.includes("سعودي") || message.includes("السعودية")) {
+      return "للعثور على فيديوهات سعودية:\n1) اكتب 'سعودي' في شريط البحث\n2) أو جرب 'أغاني سعودية' أو 'برامج سعودية'";
+    }
+    
+    return "أسف لم أفهم سؤالك جيداً. يمكنك إعادة صياغته أو طرح سؤال مثل:\n- كيف أبحث عن فيديو؟\n- أين أجد فيديوهات رياضية؟";
+  }
+}
+
+// تهيئة الذكاء الاصطناعي
+const aiAssistant = new ArabicAI();
+
+// عناصر واجهة الذكاء الاصطناعي
+const aiToggle = document.getElementById('aiToggle');
+const aiChatbox = document.getElementById('aiChatbox');
+const aiMessages = document.getElementById('aiMessages');
+const aiInput = document.getElementById('aiInput');
+const aiSend = document.getElementById('aiSend');
+const closeAiChat = document.getElementById('closeAiChat');
+
+// تبديل نافذة المحادثة
+aiToggle.addEventListener('click', () => {
+  aiChatbox.classList.toggle('active');
+});
+
+closeAiChat.addEventListener('click', () => {
+  aiChatbox.classList.remove('active');
+});
+
+// إرسال رسالة
+async function sendMessage() {
+  const message = aiInput.value.trim();
+  if (!message) return;
+  
+  const userMessage = document.createElement('div');
+  userMessage.className = 'ai-message user-message';
+  userMessage.textContent = message;
+  aiMessages.appendChild(userMessage);
+  
+  aiInput.value = '';
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+  
+  const response = await aiAssistant.respond(message);
+  
+  const aiResponse = document.createElement('div');
+  aiResponse.className = 'ai-message ai-response';
+  aiResponse.textContent = response;
+  aiMessages.appendChild(aiResponse);
+  
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+}
+
+aiInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    sendMessage();
+  }
+});
+
+aiSend.addEventListener('click', sendMessage);
+</script>
   <!-- رسائل التنبيه -->
   <div id="toast" class="toast">
     <i class="fas fa-check-circle"></i>
